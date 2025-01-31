@@ -15,7 +15,7 @@ const geistMono = localFont({
 
 export const metadata: Metadata = {
   title: "Pomodoro",
-  description: "Personal pomodoro",
+  description: "Boost your productivity with our Pomodoro timer. Manage your time effectively, stay focused, and achieve your goals. Try our easy-to-use Pomodoro technique tool today!",
 };
 
 export default function RootLayout({
