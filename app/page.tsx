@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/base/button";
 import { Moon, Sun } from "lucide-react";
 import TimerDisplay from "@/components/ui/TimerDisplay";
 import ControlButtons from "@/components/ui/ControlButtons";

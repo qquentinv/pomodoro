@@ -1,5 +1,5 @@
 import React from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/base/button";
 import { Plus, Minus } from "lucide-react";
 
 interface DurationAdjusterProps {
