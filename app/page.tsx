@@ -1,26 +1,98 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/base/button";
-import { Moon, Sun } from "lucide-react";
-import TimerDisplay from "@/components/ui/TimerDisplay";
-import ControlButtons from "@/components/ui/ControlButtons";
-import SessionInfo from "@/components/ui/SessionInfo";
-import DurationAdjuster from "@/components/ui/DurationAdjuster";
+import { Play, Pause, RotateCcw, SkipForward, ChevronDown, ChevronUp, Minus, Plus } from "lucide-react";
+
+const THEMES = {
+  sunset: {
+    name: "Sunset",
+    work: "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)",
+    break: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+  },
+  aurora: {
+    name: "Aurora",
+    work: "linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%)",
+    break: "linear-gradient(135deg, #1a1a2e 0%, #0f3460 50%, #16213e 100%)",
+  },
+  candy: {
+    name: "Candy",
+    work: "linear-gradient(135deg, #ff6b6b 0%, #feca57 100%)",
+    break: "linear-gradient(135deg, #5f27cd 0%, #48dbfb 100%)",
+  },
+  nature: {
+    name: "Nature",
+    work: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
+    break: "linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%)",
+  },
+};
+
+type ThemeKey = keyof typeof THEMES;
+
+const STORAGE_KEY = "pomodoro-settings";
+
+interface Settings {
+  workDuration: number;
+  breakDuration: number;
+  theme: ThemeKey;
+}
+
+function loadSettings(): Settings {
+  if (typeof window === "undefined") {
+    return { workDuration: 30, breakDuration: 8, theme: "sunset" };
+  }
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        workDuration: parsed.workDuration ?? 30,
+        breakDuration: parsed.breakDuration ?? 8,
+        theme: parsed.theme ?? "sunset",
+      };
+    }
+  } catch {}
+  return { workDuration: 30, breakDuration: 8, theme: "sunset" };
+}
+
+function saveSettings(settings: Settings) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+}
 
 export default function Pomodoro() {
-  const [minutes, setMinutes] = useState(25);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [minutes, setMinutes] = useState(30);
   const [seconds, setSeconds] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const [isWork, setIsWork] = useState(true);
   const [sessions, setSessions] = useState(0);
-  const [isDarkMode, setIsDarkMode] = useState(true);
-  const [workDuration, setWorkDuration] = useState(25);
-  const [breakDuration, setBreakDuration] = useState(5);
+  const [workDuration, setWorkDuration] = useState(30);
+  const [breakDuration, setBreakDuration] = useState(8);
+  const [showSettings, setShowSettings] = useState(false);
+  const [currentTheme, setCurrentTheme] = useState<ThemeKey>("sunset");
 
-  const resetTimer = useCallback(() => {
+  // Load settings on mount
+  useEffect(() => {
+    const settings = loadSettings();
+    setWorkDuration(settings.workDuration);
+    setBreakDuration(settings.breakDuration);
+    setCurrentTheme(settings.theme);
+    setMinutes(settings.workDuration);
+    setIsLoaded(true);
+  }, []);
+
+  // Save settings when they change
+  useEffect(() => {
+    if (isLoaded) {
+      saveSettings({ workDuration, breakDuration, theme: currentTheme });
+    }
+  }, [workDuration, breakDuration, currentTheme, isLoaded]);
+
+  const theme = THEMES[currentTheme];
+
+  const resetTimer = useCallback((forWorkMode?: boolean) => {
+    const targetIsWork = forWorkMode ?? isWork;
     setIsActive(false);
-    if (isWork) {
+    if (targetIsWork) {
       setMinutes(workDuration);
     } else {
       setMinutes(breakDuration);
@@ -29,8 +101,9 @@ export default function Pomodoro() {
   }, [isWork, workDuration, breakDuration]);
 
   const switchMode = useCallback(() => {
-    setIsWork(!isWork);
-    resetTimer();
+    const newIsWork = !isWork;
+    setIsWork(newIsWork);
+    resetTimer(newIsWork);
     if (isWork) {
       setSessions((s) => s + 1);
     }
@@ -51,19 +124,11 @@ export default function Pomodoro() {
           switchMode();
         }
       }, 1000);
-    } else if (!isActive && (seconds !== 0 || minutes !== 0)) {
-      clearInterval(interval ?? undefined);
     }
     return () => clearInterval(interval ?? undefined);
   }, [isActive, minutes, seconds, switchMode]);
 
-  const toggleTimer = () => {
-    setIsActive(!isActive);
-  };
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-  };
+  const toggleTimer = () => setIsActive(!isActive);
 
   const fullReset = () => {
     setIsActive(false);
@@ -73,54 +138,168 @@ export default function Pomodoro() {
     setSessions(0);
   };
 
-  const adjustDuration = (isWork: boolean, increment: boolean) => {
-    if (isWork) {
+  const adjustDuration = (isWorkDuration: boolean, increment: boolean) => {
+    if (isWorkDuration) {
       setWorkDuration((prev) => {
-        const newValue = increment ? prev + 1 : prev - 1;
-        if (!isActive) {
-          setMinutes(newValue);
-        }
-        return Math.min(Math.max(newValue, 20), 50);
+        const newValue = Math.min(Math.max(prev + (increment ? 1 : -1), 20), 50);
+        if (!isActive && isWork) setMinutes(newValue);
+        return newValue;
       });
     } else {
       setBreakDuration((prev) => {
-        const newValue = increment ? prev + 1 : prev - 1;
-        if (!isActive) {
-          setMinutes(newValue);
-        }
-        return Math.min(Math.max(newValue, 5), 15);
+        const newValue = Math.min(Math.max(prev + (increment ? 1 : -1), 5), 15);
+        if (!isActive && !isWork) setMinutes(newValue);
+        return newValue;
       });
     }
   };
 
   return (
     <div
-      className={`flex flex-col items-center justify-center min-h-screen transition-colors duration-500 ${
-        isDarkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-900"
-      }`}
+      className="min-h-screen flex flex-col items-center justify-center text-white relative overflow-hidden transition-all duration-1000"
+      style={{ background: isWork ? theme.work : theme.break }}
     >
+      {/* Decorative circles */}
+      <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-white/5 blur-3xl" />
+      <div className="absolute bottom-[-30%] right-[-15%] w-[600px] h-[600px] rounded-full bg-white/5 blur-3xl" />
+
+      {/* Main content */}
+      <div className="relative z-10 flex flex-col items-center">
+        {/* Mode badge */}
+        <div className="mb-6">
+          <span className="px-5 py-2 rounded-full bg-white/10 backdrop-blur-sm text-sm font-medium tracking-wide uppercase">
+            {isWork ? "Focus" : "Break"}
+          </span>
+        </div>
+
+        {/* Timer */}
+        <div className={`text-[10rem] sm:text-[12rem] md:text-[14rem] font-bold leading-none tracking-tighter tabular-nums ${isActive ? "animate-pulse-slow" : ""}`}>
+          {String(minutes).padStart(2, "0")}
+          <span className="opacity-60">:</span>
+          {String(seconds).padStart(2, "0")}
+        </div>
+
+        {/* Sessions counter */}
+        <p className="mt-4 text-white/60 text-sm tracking-wide">
+          {sessions} session{sessions !== 1 ? "s" : ""} completed
+        </p>
+
+        {/* Controls */}
+        <div className="flex items-center gap-6 mt-10">
+          <button
+            onClick={fullReset}
+            className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all hover:scale-110"
+          >
+            <RotateCcw className="w-6 h-6" />
+          </button>
+
+          <button
+            onClick={toggleTimer}
+            className="w-24 h-24 rounded-full bg-white shadow-2xl shadow-white/20 flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+          >
+            {isActive ? (
+              <Pause className="w-10 h-10 text-gray-900" />
+            ) : (
+              <Play className="w-10 h-10 text-gray-900 ml-1" />
+            )}
+          </button>
+
+          <button
+            onClick={switchMode}
+            className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all hover:scale-110"
+          >
+            <SkipForward className="w-6 h-6" />
+          </button>
+        </div>
+      </div>
+
+      {/* Settings toggle */}
+      <button
+        onClick={() => setShowSettings(!showSettings)}
+        className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 text-white/50 hover:text-white/80 text-sm transition-all"
+      >
+        Settings
+        {showSettings ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+      </button>
+
+      {/* Settings panel */}
       <div
-        className={`p-8 rounded-2xl shadow-lg backdrop-filter backdrop-blur-lg ${
-          isDarkMode ? "bg-gray-800 bg-opacity-50" : "bg-white bg-opacity-70"
+        className={`absolute bottom-0 left-0 right-0 bg-black/30 backdrop-blur-xl transition-all duration-300 ${
+          showSettings ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
         }`}
       >
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-4xl font-bold">Pomodoro Timer</h1>
-          <Button
-            onClick={toggleTheme}
-            variant="outline"
-            size="icon"
-            className={`rounded-full ${isDarkMode ? "bg-gray-700 text-yellow-400" : "bg-gray-200 text-gray-900"}`}
-          >
-            {isDarkMode ? <Sun className="h-[1.2rem] w-[1.2rem]" /> : <Moon className="h-[1.2rem] w-[1.2rem]" />}
-          </Button>
-        </div>
-        <TimerDisplay minutes={minutes} seconds={seconds} />
-        <ControlButtons isActive={isActive} toggleTimer={toggleTimer} fullReset={fullReset} />
-        <SessionInfo isWork={isWork} sessions={sessions} />
-        <div className="grid grid-cols-2 gap-4">
-          <DurationAdjuster isWork={true} duration={workDuration} adjustDuration={adjustDuration} />
-          <DurationAdjuster isWork={false} duration={breakDuration} adjustDuration={adjustDuration} />
+        {/* Close button */}
+        <button
+          onClick={() => setShowSettings(false)}
+          className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 text-white/50 hover:text-white/80 text-sm transition-all"
+        >
+          <ChevronDown className="w-4 h-4" />
+          Close
+        </button>
+        <div className="max-w-md mx-auto p-6 pt-10 pb-8">
+          {/* Duration controls */}
+          <div className="flex gap-8 justify-center mb-6">
+            {/* Work duration */}
+            <div className="text-center">
+              <p className="text-xs text-white/50 uppercase tracking-wider mb-2">Focus</p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => adjustDuration(true, false)}
+                  disabled={workDuration <= 20}
+                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 flex items-center justify-center"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <span className="text-2xl font-semibold w-12 tabular-nums">{workDuration}</span>
+                <button
+                  onClick={() => adjustDuration(true, true)}
+                  disabled={workDuration >= 50}
+                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 flex items-center justify-center"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Break duration */}
+            <div className="text-center">
+              <p className="text-xs text-white/50 uppercase tracking-wider mb-2">Break</p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => adjustDuration(false, false)}
+                  disabled={breakDuration <= 5}
+                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 flex items-center justify-center"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <span className="text-2xl font-semibold w-12 tabular-nums">{breakDuration}</span>
+                <button
+                  onClick={() => adjustDuration(false, true)}
+                  disabled={breakDuration >= 15}
+                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 flex items-center justify-center"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Theme selector */}
+          <div className="flex justify-center gap-2">
+            {(Object.keys(THEMES) as ThemeKey[]).map((key) => (
+              <button
+                key={key}
+                onClick={() => setCurrentTheme(key)}
+                className={`px-4 py-2 rounded-full text-sm transition-all ${
+                  currentTheme === key
+                    ? "bg-white text-gray-900 font-medium"
+                    : "bg-white/10 hover:bg-white/20"
+                }`}
+              >
+                {THEMES[key].name}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

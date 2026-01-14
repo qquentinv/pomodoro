@@ -10,6 +10,23 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+
+  /* Timer pulse animation */
+  @keyframes pulse-slow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+  }
+
+  .animate-pulse-slow {
+    animation: pulse-slow 2s ease-in-out infinite;
+  }
+
+  /* Glass effect */
+  .glass {
+    backdrop-filter: blur(48px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
 }
 
 @layer base {
