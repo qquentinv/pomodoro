@@ -87,6 +87,17 @@ export default function Pomodoro() {
     }
   }, [workDuration, breakDuration, currentTheme, isLoaded]);
 
+  // Update document title with timer when active
+  useEffect(() => {
+    if (isActive) {
+      const time = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+      const mode = isWork ? "Focus" : "Break";
+      document.title = `${time} - ${mode}`;
+    } else {
+      document.title = "Pomodoro";
+    }
+  }, [isActive, minutes, seconds, isWork]);
+
   const theme = THEMES[currentTheme];
 
   const resetTimer = useCallback((forWorkMode?: boolean) => {
