@@ -174,7 +174,7 @@ export default function Pomodoro() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center text-white relative overflow-hidden transition-all duration-1000"
+      className="fixed inset-0 flex flex-col items-center justify-center text-white overflow-hidden transition-all duration-1000"
       style={{ background: isWork ? theme.work : theme.break }}
     >
       {/* Decorative circles */}
@@ -184,8 +184,8 @@ export default function Pomodoro() {
       {/* Main content */}
       <div className="relative z-10 flex flex-col items-center">
         {/* Mode badge */}
-        <div className="mb-6 relative">
-          <span className="px-5 py-2 rounded-full bg-white/10 backdrop-blur-sm text-sm font-medium tracking-wide uppercase">
+        <div className="mb-4 sm:mb-6 relative">
+          <span className="px-4 py-1.5 sm:px-5 sm:py-2 rounded-full bg-white/10 backdrop-blur-sm text-xs sm:text-sm font-medium tracking-wide uppercase">
             {isWork ? "Focus" : "Break"}
           </span>
           <button
@@ -204,42 +204,42 @@ export default function Pomodoro() {
         </div>
 
         {/* Timer */}
-        <div className={`text-[10rem] sm:text-[12rem] md:text-[14rem] font-bold leading-none tracking-tighter tabular-nums ${isActive ? "animate-pulse-slow" : ""}`}>
+        <div className={`text-[6rem] sm:text-[10rem] md:text-[14rem] font-bold leading-none tracking-tighter tabular-nums ${isActive ? "animate-pulse-slow" : ""}`}>
           {String(minutes).padStart(2, "0")}
           <span className="opacity-60">:</span>
           {String(seconds).padStart(2, "0")}
         </div>
 
         {/* Sessions counter */}
-        <p className="mt-4 text-white/60 text-sm tracking-wide">
+        <p className="mt-2 sm:mt-4 text-white/60 text-xs sm:text-sm tracking-wide">
           {sessions} session{sessions !== 1 ? "s" : ""} completed
         </p>
 
         {/* Controls */}
-        <div className="flex items-center gap-6 mt-10">
+        <div className="flex items-center gap-4 sm:gap-6 mt-6 sm:mt-10">
           <button
             onClick={fullReset}
-            className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all hover:scale-110"
+            className="w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all hover:scale-110"
           >
-            <RotateCcw className="w-6 h-6" />
+            <RotateCcw className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
 
           <button
             onClick={toggleTimer}
-            className="w-24 h-24 rounded-full bg-white shadow-2xl shadow-white/20 flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+            className="w-16 h-16 sm:w-24 sm:h-24 rounded-full bg-white shadow-2xl shadow-white/20 flex items-center justify-center transition-all hover:scale-105 active:scale-95"
           >
             {isActive ? (
-              <Pause className="w-10 h-10 text-gray-900" />
+              <Pause className="w-7 h-7 sm:w-10 sm:h-10 text-gray-900" />
             ) : (
-              <Play className="w-10 h-10 text-gray-900 ml-1" />
+              <Play className="w-7 h-7 sm:w-10 sm:h-10 text-gray-900 ml-0.5 sm:ml-1" />
             )}
           </button>
 
           <button
-            onClick={switchMode}
-            className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all hover:scale-110"
+            onClick={() => switchMode()}
+            className="w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all hover:scale-110"
           >
-            <SkipForward className="w-6 h-6" />
+            <SkipForward className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
       </div>
@@ -247,7 +247,8 @@ export default function Pomodoro() {
       {/* Settings toggle */}
       <button
         onClick={() => setShowSettings(!showSettings)}
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 text-white/50 hover:text-white/80 text-sm transition-all"
+        className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 text-white/50 hover:text-white/80 text-sm transition-all"
+        style={{ bottom: "calc(1.5rem + env(safe-area-inset-bottom))" }}
       >
         Settings
         {showSettings ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
@@ -267,7 +268,7 @@ export default function Pomodoro() {
           <ChevronDown className="w-4 h-4" />
           Close
         </button>
-        <div className="max-w-md mx-auto p-6 pt-10 pb-8">
+        <div className="max-w-md mx-auto p-6 pt-10 pb-8" style={{ paddingBottom: "calc(2rem + env(safe-area-inset-bottom))" }}>
           {/* Duration controls */}
           <div className="flex gap-8 justify-center mb-6">
             {/* Work duration */}
