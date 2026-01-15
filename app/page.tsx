@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Play, Pause, RotateCcw, SkipForward, ChevronDown, ChevronUp, Minus, Plus } from "lucide-react";
+import { Play, Pause, RotateCcw, SkipForward, ChevronDown, ChevronUp, Minus, Plus, RefreshCw } from "lucide-react";
 
 const THEMES = {
   sunset: {
@@ -34,11 +34,12 @@ interface Settings {
   workDuration: number;
   breakDuration: number;
   theme: ThemeKey;
+  autoContinue: boolean;
 }
 
 function loadSettings(): Settings {
   if (typeof window === "undefined") {
-    return { workDuration: 30, breakDuration: 8, theme: "sunset" };
+    return { workDuration: 30, breakDuration: 8, theme: "sunset", autoContinue: true };
   }
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -48,10 +49,11 @@ function loadSettings(): Settings {
         workDuration: parsed.workDuration ?? 30,
         breakDuration: parsed.breakDuration ?? 8,
         theme: parsed.theme ?? "sunset",
+        autoContinue: parsed.autoContinue ?? true,
       };
     }
   } catch {}
-  return { workDuration: 30, breakDuration: 8, theme: "sunset" };
+  return { workDuration: 30, breakDuration: 8, theme: "sunset", autoContinue: true };
 }
 
 function saveSettings(settings: Settings) {
@@ -69,6 +71,7 @@ export default function Pomodoro() {
   const [breakDuration, setBreakDuration] = useState(8);
   const [showSettings, setShowSettings] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<ThemeKey>("sunset");
+  const [autoContinue, setAutoContinue] = useState(true);
 
   // Load settings on mount
   useEffect(() => {
@@ -76,6 +79,7 @@ export default function Pomodoro() {
     setWorkDuration(settings.workDuration);
     setBreakDuration(settings.breakDuration);
     setCurrentTheme(settings.theme);
+    setAutoContinue(settings.autoContinue);
     setMinutes(settings.workDuration);
     setIsLoaded(true);
   }, []);
@@ -83,9 +87,9 @@ export default function Pomodoro() {
   // Save settings when they change
   useEffect(() => {
     if (isLoaded) {
-      saveSettings({ workDuration, breakDuration, theme: currentTheme });
+      saveSettings({ workDuration, breakDuration, theme: currentTheme, autoContinue });
     }
-  }, [workDuration, breakDuration, currentTheme, isLoaded]);
+  }, [workDuration, breakDuration, currentTheme, autoContinue, isLoaded]);
 
   // Update document title with timer when active
   useEffect(() => {
@@ -100,9 +104,11 @@ export default function Pomodoro() {
 
   const theme = THEMES[currentTheme];
 
-  const resetTimer = useCallback((forWorkMode?: boolean) => {
+  const resetTimer = useCallback((forWorkMode?: boolean, keepActive?: boolean) => {
     const targetIsWork = forWorkMode ?? isWork;
-    setIsActive(false);
+    if (!keepActive) {
+      setIsActive(false);
+    }
     if (targetIsWork) {
       setMinutes(workDuration);
     } else {
@@ -111,14 +117,15 @@ export default function Pomodoro() {
     setSeconds(0);
   }, [isWork, workDuration, breakDuration]);
 
-  const switchMode = useCallback(() => {
+  const switchMode = useCallback((fromTimerEnd?: boolean) => {
     const newIsWork = !isWork;
     setIsWork(newIsWork);
-    resetTimer(newIsWork);
+    const shouldKeepActive = fromTimerEnd && autoContinue;
+    resetTimer(newIsWork, shouldKeepActive);
     if (isWork) {
       setSessions((s) => s + 1);
     }
-  }, [isWork, resetTimer]);
+  }, [isWork, resetTimer, autoContinue]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -132,7 +139,7 @@ export default function Pomodoro() {
           setSeconds(59);
         } else {
           clearInterval(interval ?? undefined);
-          switchMode();
+          switchMode(true);
         }
       }, 1000);
     }
@@ -177,10 +184,23 @@ export default function Pomodoro() {
       {/* Main content */}
       <div className="relative z-10 flex flex-col items-center">
         {/* Mode badge */}
-        <div className="mb-6">
+        <div className="mb-6 relative">
           <span className="px-5 py-2 rounded-full bg-white/10 backdrop-blur-sm text-sm font-medium tracking-wide uppercase">
             {isWork ? "Focus" : "Break"}
           </span>
+          <button
+            onClick={() => setAutoContinue(!autoContinue)}
+            className={`group absolute -right-8 top-1/2 -translate-y-1/2 p-1 rounded-full transition-all ${
+              autoContinue
+                ? "text-white/60 hover:text-white/80"
+                : "text-white/20 hover:text-white/40"
+            }`}
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span className="absolute left-1/2 -translate-x-1/2 top-8 px-2 py-1 bg-black/80 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+              Auto-continue {autoContinue ? "on" : "off"}
+            </span>
+          </button>
         </div>
 
         {/* Timer */}
@@ -296,7 +316,7 @@ export default function Pomodoro() {
           </div>
 
           {/* Theme selector */}
-          <div className="flex justify-center gap-2">
+          <div className="flex flex-wrap justify-center items-center gap-2">
             {(Object.keys(THEMES) as ThemeKey[]).map((key) => (
               <button
                 key={key}
